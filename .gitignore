@@ -1,0 +1,8 @@
+# Run logs created when the output/log folder is inside the repo
+_FBXtoGLB_logs/
+
+# Test models and conversion output
+*.fbx
+*.FBX
+*.glb
+.fbx2glb-*.glb
