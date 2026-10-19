@@ -11,6 +11,8 @@ Point it at a folder and it finds every `.fbx` underneath, converts each one in 
 
 The Python that drives Blender is embedded in the script, so you don't need a separate Python install.
 
+Tested with Blender 5.2.2 under both Windows PowerShell 5.1 and PowerShell 7.
+
 ## Quick start
 
 ```powershell
@@ -38,7 +40,13 @@ To point at a specific Blender install:
 .\Convert-FBXtoGLB.ps1 -InputFolder 'D:\Models' -BlenderPath 'C:\Program Files\Blender Foundation\Blender 4.5\blender.exe'
 ```
 
-Without `-BlenderPath`, the script searches `PATH` first, then the `Blender Foundation` folders under Program Files, and picks the highest version it finds. Portable or custom installs usually need `-BlenderPath`.
+Without `-BlenderPath`, the script looks in this order:
+
+1. `PATH`
+2. The `Blender Foundation` folders under Program Files, picking the highest version
+3. Steam libraries on any drive (Blender installed through Steam)
+
+Portable or custom installs usually need `-BlenderPath`.
 
 If script execution is disabled on your machine, you can bypass the execution policy for this one process (organization policy permitting):
 

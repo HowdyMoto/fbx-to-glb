@@ -19,8 +19,9 @@ Folder to search recursively. Paths are treated literally, including brackets.
 .PARAMETER OutputFolder
 Optional destination root. Subfolders and filenames are preserved.
 .PARAMETER BlenderPath
-Path to blender.exe. If omitted, searches PATH and standard Blender Foundation
-directories under Program Files. Supply this for portable or custom installs.
+Path to blender.exe. If omitted, searches PATH, standard Blender Foundation
+directories under Program Files, then Steam libraries. Supply this for portable
+or custom installs.
 .PARAMETER Overwrite
 Replace existing GLBs only after successful export and validation.
 .PARAMETER LogDirectory
@@ -120,7 +121,38 @@ function Find-Blender([string]$RequestedPath) {
     }
     $latest = $candidates | Sort-Object Version -Descending | Select-Object -First 1
     if ($latest) { return $latest.Path }
+
+    $steam = Find-SteamBlender
+    if ($steam) { return $steam }
     throw 'Blender was not found. Install Blender or pass -BlenderPath with the full path to blender.exe.'
+}
+
+function Find-SteamBlender {
+    # Steam installs Blender under <library>\steamapps\common\Blender, and any
+    # drive can hold a library. libraryfolders.vdf lists them all.
+    $steamRoots = @()
+    $registry = Get-ItemProperty -LiteralPath 'HKCU:\Software\Valve\Steam' -Name SteamPath -ErrorAction SilentlyContinue
+    if ($registry -and $registry.SteamPath) { $steamRoots += $registry.SteamPath }
+    if (${env:ProgramFiles(x86)}) { $steamRoots += Join-Path ${env:ProgramFiles(x86)} 'Steam' }
+
+    $libraries = @()
+    foreach ($steamRoot in $steamRoots) {
+        $libraries += $steamRoot
+        $manifest = Join-Path $steamRoot 'steamapps\libraryfolders.vdf'
+        if (-not (Test-Path -LiteralPath $manifest -PathType Leaf)) { continue }
+        try { $content = [System.IO.File]::ReadAllText($manifest) }
+        catch { continue }
+        foreach ($match in [regex]::Matches($content, '"path"\s+"((?:[^"\\]|\\.)*)"')) {
+            $libraries += $match.Groups[1].Value -replace '\\\\', '\'
+        }
+    }
+    foreach ($library in $libraries) {
+        $executable = Join-Path $library 'steamapps\common\Blender\blender.exe'
+        if (Test-Path -LiteralPath $executable -PathType Leaf) {
+            return [System.IO.Path]::GetFullPath($executable)
+        }
+    }
+    return $null
 }
 
 function Get-FbxFiles([string]$Root) {
